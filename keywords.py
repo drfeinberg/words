@@ -5,13 +5,15 @@ import os  # To check file existence
 
 # Load predefined keywords
 keywords = [
-    'Normal/Weird', 'accent', 'age', 'aggressive', 'agreeable', 'anger', 
+    'normal/weird', 'accent', 'age', 'aggressive', 'agreeable', 'anger', 
     'attractive', 'charisma', 'confidence', 'conscientiousness', 'dominance', 
     'emotionally stable', 'empathy', 'extraversion', 'fear', 'funny', 'gender', 
     'happy', 'health', 'height', 'height/size', 'intelligent', 'leadership', 
     'loudness', 'neuroticism', 'openness', 'sad', 'skin', 'socioeconomic', 
     'speech', 'strength', 'surprise', 'trustworthy', 'valence', 'voice'
 ]
+
+keywords = sorted(keywords)
 
 # File paths for saving progress
 PROGRESS_FILE = "progress.csv"
