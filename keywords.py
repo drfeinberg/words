@@ -64,8 +64,9 @@ if uploaded_file:
         st.write(f"### Reviewing Description {current_index + 1} of {total_descriptions}")
 
         current_entry = descriptions_df.iloc[current_index]
-        st.header(f"**Description:**\n {current_entry['description']}")
-
+        st.header(f"**Description:**\n ")
+        st.header(f"{current_entry['description']}")
+        
         # Parse existing keywords
         current_keywords = current_entry['semantic_fields']
 
