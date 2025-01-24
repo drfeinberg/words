@@ -16,30 +16,36 @@ keywords = [
 # File paths for saving progress
 PROGRESS_FILE = "progress.csv"
 
+# Function to safely evaluate `semantic_fields` values
+def safe_literal_eval(val):
+    try:
+        return ast.literal_eval(val) if pd.notna(val) else []
+    except (ValueError, SyntaxError):
+        st.warning(f"Skipping invalid value in semantic_fields: {val}")
+        return []
+
 # File upload
 uploaded_file = st.file_uploader("Upload your CSV file with descriptions and semantic fields", type=["csv"])
 
 if uploaded_file:
-    # Load the CSV
+    # Load the uploaded CSV
     original_df = pd.read_csv(uploaded_file)
 
     if 'description' not in original_df.columns or 'semantic_fields' not in original_df.columns:
         st.error("The CSV must have 'description' and 'semantic_fields' columns.")
     else:
-        # Load progress or initialize
+        # Check if progress file exists and merge progress
         if os.path.exists(PROGRESS_FILE):
             saved_df = pd.read_csv(PROGRESS_FILE)
-            saved_df['semantic_fields'] = saved_df['semantic_fields'].apply(lambda x: ast.literal_eval(x))
+            saved_df['semantic_fields'] = saved_df['semantic_fields'].apply(safe_literal_eval)
             descriptions_df = pd.merge(original_df, saved_df, on='description', how='left')
             descriptions_df['semantic_fields'] = descriptions_df['semantic_fields_y'].combine_first(descriptions_df['semantic_fields_x'])
             descriptions_df = descriptions_df.drop(columns=['semantic_fields_x', 'semantic_fields_y'])
         else:
             descriptions_df = original_df.copy()
-            descriptions_df['semantic_fields'] = descriptions_df['semantic_fields'].apply(
-                lambda x: ast.literal_eval(x) if pd.notna(x) else []
-            )
+            descriptions_df['semantic_fields'] = descriptions_df['semantic_fields'].apply(safe_literal_eval)
 
-        # Track progress
+        # Initialize progress tracking
         if 'progress' not in st.session_state:
             st.session_state.progress = 0
 
