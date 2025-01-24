@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import ast  # For safely evaluating list strings
+import os  # To check file existence
 
 # Load predefined keywords
 keywords = [
@@ -12,38 +13,47 @@ keywords = [
     'speech', 'strength', 'surprise', 'trustworthy', 'valence', 'voice'
 ]
 
+# File paths for saving progress
+PROGRESS_FILE = "progress.csv"
+
 # File upload
 uploaded_file = st.file_uploader("Upload your CSV file with descriptions and semantic fields", type=["csv"])
 
 if uploaded_file:
     # Load the CSV
-    descriptions_df = pd.read_csv(uploaded_file)
+    original_df = pd.read_csv(uploaded_file)
 
-    if 'description' not in descriptions_df.columns or 'semantic_fields' not in descriptions_df.columns:
+    if 'description' not in original_df.columns or 'semantic_fields' not in original_df.columns:
         st.error("The CSV must have 'description' and 'semantic_fields' columns.")
     else:
-        # Load progress
+        # Load progress or initialize
+        if os.path.exists(PROGRESS_FILE):
+            saved_df = pd.read_csv(PROGRESS_FILE)
+            saved_df['semantic_fields'] = saved_df['semantic_fields'].apply(lambda x: ast.literal_eval(x))
+            descriptions_df = pd.merge(original_df, saved_df, on='description', how='left')
+            descriptions_df['semantic_fields'] = descriptions_df['semantic_fields_y'].combine_first(descriptions_df['semantic_fields_x'])
+            descriptions_df = descriptions_df.drop(columns=['semantic_fields_x', 'semantic_fields_y'])
+        else:
+            descriptions_df = original_df.copy()
+            descriptions_df['semantic_fields'] = descriptions_df['semantic_fields'].apply(
+                lambda x: ast.literal_eval(x) if pd.notna(x) else []
+            )
+
+        # Track progress
         if 'progress' not in st.session_state:
             st.session_state.progress = 0
-            st.session_state.data = descriptions_df.to_dict('records')
 
-        # Display current progress
         current_index = st.session_state.progress
-        total_descriptions = len(st.session_state.data)
+        total_descriptions = len(descriptions_df)
 
+        # Resume progress
         st.write(f"### Reviewing Description {current_index + 1} of {total_descriptions}")
 
-        current_entry = st.session_state.data[current_index]
+        current_entry = descriptions_df.iloc[current_index]
         st.write(f"**Description:** {current_entry['description']}")
 
         # Parse existing keywords
-        try:
-            current_keywords = ast.literal_eval(current_entry['semantic_fields']) if pd.notna(current_entry['semantic_fields']) else []
-            if not isinstance(current_keywords, list):
-                raise ValueError
-        except (ValueError, SyntaxError):
-            current_keywords = []
-            st.warning(f"Invalid semantic fields format for this description. Defaulting to an empty list.")
+        current_keywords = current_entry['semantic_fields']
 
         st.write("Current Keywords: ", ", ".join(current_keywords) if current_keywords else "None")
 
@@ -62,13 +72,12 @@ if uploaded_file:
 
         # Save updates and move to the next description
         if st.button("Save and Next"):
-            # Update current entry
-            st.session_state.data[current_index]['semantic_fields'] = selected_keywords
+            # Update the DataFrame
+            descriptions_df.at[current_index, 'semantic_fields'] = selected_keywords
 
-            # Save progress to a file
-            updated_df = pd.DataFrame(st.session_state.data)
-            updated_df['semantic_fields'] = updated_df['semantic_fields'].apply(lambda x: str(x))  # Convert lists to strings
-            updated_df.to_csv("updated_descriptions.csv", index=False)
+            # Save progress to file
+            descriptions_df['semantic_fields'] = descriptions_df['semantic_fields'].apply(lambda x: str(x))
+            descriptions_df.to_csv(PROGRESS_FILE, index=False)
 
             # Move to the next description
             if current_index + 1 < total_descriptions:
@@ -80,8 +89,7 @@ if uploaded_file:
 
         # Option to save progress and quit
         if st.button("Save and Quit"):
-            updated_df = pd.DataFrame(st.session_state.data)
-            updated_df['semantic_fields'] = updated_df['semantic_fields'].apply(lambda x: str(x))
-            updated_df.to_csv("updated_descriptions.csv", index=False)
-            st.success("Progress saved to 'updated_descriptions.csv'. You can resume later.")
+            descriptions_df['semantic_fields'] = descriptions_df['semantic_fields'].apply(lambda x: str(x))
+            descriptions_df.to_csv(PROGRESS_FILE, index=False)
+            st.success(f"Progress saved to '{PROGRESS_FILE}'. You can resume later.")
             st.stop()
