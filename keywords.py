@@ -1,6 +1,7 @@
 import streamlit as st
+import pandas as pd
 
-# Predefined list of keywords
+# Load keywords
 keywords = [
     'Normal/Weird', 'accent', 'age', 'aggressive', 'agreeable', 'anger', 
     'attractive', 'charisma', 'confidence', 'conscientiousness', 'dominance', 
@@ -10,27 +11,47 @@ keywords = [
     'speech', 'strength', 'surprise', 'trustworthy', 'valence', 'voice'
 ]
 
-# List of descriptions to check against
-descriptions = st.text_area("Enter descriptions (one per line):").splitlines()
+# File upload
+uploaded_file = st.file_uploader("Upload your CSV file with descriptions", type=["csv"])
 
-# Missing keywords identified
-missing_keywords = [desc for desc in descriptions if desc not in keywords]
+if uploaded_file:
+    # Load the CSV
+    descriptions_df = pd.read_csv(uploaded_file)
+    if 'description' not in descriptions_df.columns:
+        st.error("The CSV must have a 'description' column.")
+    else:
+        st.write("### Descriptions and Associated Keywords")
 
-st.header("Keywords Manager")
+        # Initialize keywords column if not present
+        if 'keywords' not in descriptions_df.columns:
+            descriptions_df['keywords'] = ""
 
-# Display missing descriptions
-if missing_keywords:
-    st.subheader("Descriptions not in Keywords:")
-    for keyword in missing_keywords:
-        st.text(keyword)
+        # Interactive keyword assignment
+        updated_data = []
+        for index, row in descriptions_df.iterrows():
+            st.write(f"**Description {index + 1}:** {row['description']}")
 
-    # Add missing keywords interactively
-    add_to_keywords = st.multiselect("Select descriptions to add to keywords:", missing_keywords)
+            # Display current keywords
+            current_keywords = row['keywords'].split(", ") if row['keywords'] else []
+            st.write("Current Keywords: ", ", ".join(current_keywords) if current_keywords else "None")
 
-    if st.button("Add Selected to Keywords"):
-        keywords.extend(add_to_keywords)
-        keywords = list(set(keywords))  # Ensure uniqueness
-        st.success(f"Added {len(add_to_keywords)} keywords!")
-        st.text_area("Updated Keywords List:", "\n".join(sorted(keywords)))
-else:
-    st.success("All descriptions are already included in the keywords list!")
+            # Checklist for keywords
+            selected_keywords = st.multiselect(
+                f"Select keywords for description {index + 1}",
+                options=keywords,
+                default=current_keywords,
+                key=f"keywords_{index}"
+            )
+
+            # Update data
+            updated_data.append({
+                "description": row['description'],
+                "keywords": ", ".join(selected_keywords)
+            })
+
+        # Save updated data
+        if st.button("Save Updates"):
+            updated_df = pd.DataFrame(updated_data)
+            updated_df.to_csv("updated_descriptions.csv", index=False)
+            st.success("Updated descriptions saved to 'updated_descriptions.csv'!")
+            st.dataframe(updated_df)
