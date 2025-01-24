@@ -3,17 +3,15 @@ import pandas as pd
 import ast  # For safely evaluating list strings
 import os  # To check file existence
 
-# Load predefined keywords
-keywords = [
-    'normal/weird', 'accent', 'age', 'aggressive', 'agreeable', 'anger', 
+# Load predefined keywords (sorted alphabetically)
+keywords = sorted([
+    'Normal/Weird', 'accent', 'age', 'aggressive', 'agreeable', 'anger', 
     'attractive', 'charisma', 'confidence', 'conscientiousness', 'dominance', 
     'emotionally stable', 'empathy', 'extraversion', 'fear', 'funny', 'gender', 
     'happy', 'health', 'height', 'height/size', 'intelligent', 'leadership', 
     'loudness', 'neuroticism', 'openness', 'sad', 'skin', 'socioeconomic', 
     'speech', 'strength', 'surprise', 'trustworthy', 'valence', 'voice'
-]
-
-keywords = sorted(keywords)
+])
 
 # File paths for saving progress
 PROGRESS_FILE = "progress.csv"
@@ -65,18 +63,22 @@ if uploaded_file:
 
         st.write("Current Keywords: ", ", ".join(current_keywords) if current_keywords else "None")
 
-        # Checklist for keywords in a grid layout
+        # Checklist for keywords in a grid layout (vertical sorting)
         st.write("Select keywords for this description:")
         selected_keywords = []
         num_columns = 4  # Adjust this number to control the grid layout
+
+        # Divide the keywords into vertical chunks for each column
+        rows_per_column = -(-len(keywords) // num_columns)  # Ceiling division
+        keyword_chunks = [keywords[i:i + rows_per_column] for i in range(0, len(keywords), rows_per_column)]
         columns = st.columns(num_columns)
 
-        for idx, keyword in enumerate(keywords):
-            column = columns[idx % num_columns]
+        for col_idx, column in enumerate(columns):
             with column:
-                checked = keyword in current_keywords
-                if st.checkbox(keyword, value=checked, key=f"{current_index}_{keyword}"):
-                    selected_keywords.append(keyword)
+                for keyword in keyword_chunks[col_idx]:
+                    checked = keyword in current_keywords
+                    if st.checkbox(keyword, value=checked, key=f"{current_index}_{keyword}"):
+                        selected_keywords.append(keyword)
 
         # Save updates and move to the next description
         if st.button("Save and Next"):
