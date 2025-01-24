@@ -19,10 +19,18 @@ PROGRESS_FILE = "progress.csv"
 # Function to safely evaluate `semantic_fields` values
 def safe_literal_eval(val):
     try:
-        return ast.literal_eval(val) if pd.notna(val) else []
+        # If `val` is already a list-like string, evaluate it
+        if pd.notna(val):
+            if val.startswith("[") and val.endswith("]"):  # Check if it's a list
+                return ast.literal_eval(val)
+            else:  # If it's a single string, wrap it in a list
+                return [val]
+        else:
+            return []
     except (ValueError, SyntaxError):
         st.warning(f"Skipping invalid value in semantic_fields: {val}")
         return []
+
 
 # File upload
 uploaded_file = st.file_uploader("Upload your CSV file with descriptions and semantic fields", type=["csv"])
@@ -37,7 +45,7 @@ if uploaded_file:
         # Check if progress file exists and merge progress
         if os.path.exists(PROGRESS_FILE):
             saved_df = pd.read_csv(PROGRESS_FILE)
-            saved_df['semantic_fields'] = saved_df['semantic_fields'] #.apply(safe_literal_eval)
+            saved_df['semantic_fields'] = saved_df['semantic_fields'].apply(safe_literal_eval)
             descriptions_df = pd.merge(original_df, saved_df, on='description', how='left')
             descriptions_df['semantic_fields'] = descriptions_df['semantic_fields_y'].combine_first(descriptions_df['semantic_fields_x'])
             descriptions_df = descriptions_df.drop(columns=['semantic_fields_x', 'semantic_fields_y'])
