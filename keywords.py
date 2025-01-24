@@ -5,7 +5,7 @@ import os  # To check file existence
 
 # Load predefined keywords (sorted alphabetically)
 keywords = sorted([
-    'normal/weird', 'accent', 'age', 'aggressive', 'agreeable', 'anger', 
+    'Normal/Weird', 'accent', 'age', 'aggressive', 'agreeable', 'anger', 
     'attractive', 'charisma', 'confidence', 'conscientiousness', 'dominance', 
     'emotionally stable', 'empathy', 'extraversion', 'fear', 'funny', 'gender', 
     'happy', 'health', 'height', 'height/size', 'intelligent', 'leadership', 
@@ -19,18 +19,15 @@ PROGRESS_FILE = "progress.csv"
 # Function to safely evaluate `semantic_fields` values
 def safe_literal_eval(val):
     try:
-        # If `val` is already a list-like string, evaluate it
         if pd.notna(val):
-            if val.startswith("[") and val.endswith("]"):  # Check if it's a list
+            if val.startswith("[") and val.endswith("]"):
                 return ast.literal_eval(val)
-            else:  # If it's a single string, wrap it in a list
-                return [val]
-        else:
-            return []
+            else:
+                return [val]  # Wrap single strings in a list
+        return []
     except (ValueError, SyntaxError):
         st.warning(f"Skipping invalid value in semantic_fields: {val}")
         return []
-
 
 # File upload
 uploaded_file = st.file_uploader("Upload your CSV file with descriptions and semantic fields", type=["csv"])
@@ -53,7 +50,7 @@ if uploaded_file:
             descriptions_df = original_df.copy()
             descriptions_df['semantic_fields'] = descriptions_df['semantic_fields'].apply(safe_literal_eval)
 
-        # Initialize progress tracking
+        # Initialize session state for progress
         if 'progress' not in st.session_state:
             st.session_state.progress = 0
 
@@ -64,9 +61,8 @@ if uploaded_file:
         st.write(f"### Reviewing Description {current_index + 1} of {total_descriptions}")
 
         current_entry = descriptions_df.iloc[current_index]
-        st.header(f"**Description:**\n ")
-        st.header(f"{current_entry['description']}")
-        
+        st.write(f"**Description:** {current_entry['description']}")
+
         # Parse existing keywords
         current_keywords = current_entry['semantic_fields']
 
@@ -101,7 +97,7 @@ if uploaded_file:
             # Move to the next description
             if current_index + 1 < total_descriptions:
                 st.session_state.progress += 1
-                st.experimental_rerun()
+                st.experimental_rerun()  # Safely refresh the app
             else:
                 st.success("All descriptions reviewed and saved!")
                 st.stop()
