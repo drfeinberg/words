@@ -37,7 +37,7 @@ if uploaded_file:
         # Check if progress file exists and merge progress
         if os.path.exists(PROGRESS_FILE):
             saved_df = pd.read_csv(PROGRESS_FILE)
-            saved_df['semantic_fields'] = saved_df['semantic_fields'].apply(safe_literal_eval)
+            saved_df['semantic_fields'] = saved_df['semantic_fields'] #.apply(safe_literal_eval)
             descriptions_df = pd.merge(original_df, saved_df, on='description', how='left')
             descriptions_df['semantic_fields'] = descriptions_df['semantic_fields_y'].combine_first(descriptions_df['semantic_fields_x'])
             descriptions_df = descriptions_df.drop(columns=['semantic_fields_x', 'semantic_fields_y'])
