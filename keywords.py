@@ -22,42 +22,61 @@ if uploaded_file:
     if 'description' not in descriptions_df.columns or 'semantic_fields' not in descriptions_df.columns:
         st.error("The CSV must have 'description' and 'semantic_fields' columns.")
     else:
-        st.write("### Descriptions and Associated Keywords")
+        # Load progress
+        if 'progress' not in st.session_state:
+            st.session_state.progress = 0
+            st.session_state.data = descriptions_df.to_dict('records')
 
-        # Interactive keyword assignment
-        updated_data = []
-        for index, row in descriptions_df.iterrows():
-            st.write(f"**Description {index + 1}:** {row['description']}")
+        # Display current progress
+        current_index = st.session_state.progress
+        total_descriptions = len(st.session_state.data)
 
-            # Load current keywords from 'semantic_fields'
-            try:
-                current_keywords = ast.literal_eval(row['semantic_fields']) if pd.notna(row['semantic_fields']) else []
-                if not isinstance(current_keywords, list):
-                    raise ValueError
-            except (ValueError, SyntaxError):
-                current_keywords = []
-                st.warning(f"Invalid semantic fields format for description {index + 1}. Defaulting to empty list.")
+        st.write(f"### Reviewing Description {current_index + 1} of {total_descriptions}")
 
-            st.write("Current Keywords: ", ", ".join(current_keywords) if current_keywords else "None")
+        current_entry = st.session_state.data[current_index]
+        st.write(f"**Description:** {current_entry['description']}")
 
-            # Checklist for keywords
-            selected_keywords = st.multiselect(
-                f"Select keywords for description {index + 1}",
-                options=keywords,
-                default=current_keywords,
-                key=f"keywords_{index}"
-            )
+        # Parse existing keywords
+        try:
+            current_keywords = ast.literal_eval(current_entry['semantic_fields']) if pd.notna(current_entry['semantic_fields']) else []
+            if not isinstance(current_keywords, list):
+                raise ValueError
+        except (ValueError, SyntaxError):
+            current_keywords = []
+            st.warning(f"Invalid semantic fields format for this description. Defaulting to an empty list.")
 
-            # Update data
-            updated_data.append({
-                "description": row['description'],
-                "semantic_fields": selected_keywords  # Store updated list
-            })
+        st.write("Current Keywords: ", ", ".join(current_keywords) if current_keywords else "None")
 
-        # Save updated data
-        if st.button("Save Updates"):
-            updated_df = pd.DataFrame(updated_data)
+        # Checklist for keywords
+        selected_keywords = []
+        st.write("Select keywords for this description:")
+        for keyword in keywords:
+            checked = keyword in current_keywords
+            if st.checkbox(keyword, value=checked, key=f"{current_index}_{keyword}"):
+                selected_keywords.append(keyword)
+
+        # Save updates and move to the next description
+        if st.button("Save and Next"):
+            # Update current entry
+            st.session_state.data[current_index]['semantic_fields'] = selected_keywords
+
+            # Save progress to a file
+            updated_df = pd.DataFrame(st.session_state.data)
             updated_df['semantic_fields'] = updated_df['semantic_fields'].apply(lambda x: str(x))  # Convert lists to strings
             updated_df.to_csv("updated_descriptions.csv", index=False)
-            st.success("Updated descriptions saved to 'updated_descriptions.csv'!")
-            st.dataframe(updated_df)
+
+            # Move to the next description
+            if current_index + 1 < total_descriptions:
+                st.session_state.progress += 1
+                st.experimental_rerun()
+            else:
+                st.success("All descriptions reviewed and saved!")
+                st.stop()
+
+        # Option to save progress and quit
+        if st.button("Save and Quit"):
+            updated_df = pd.DataFrame(st.session_state.data)
+            updated_df['semantic_fields'] = updated_df['semantic_fields'].apply(lambda x: str(x))
+            updated_df.to_csv("updated_descriptions.csv", index=False)
+            st.success("Progress saved to 'updated_descriptions.csv'. You can resume later.")
+            st.stop()
