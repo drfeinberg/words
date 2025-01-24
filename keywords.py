@@ -47,13 +47,18 @@ if uploaded_file:
 
         st.write("Current Keywords: ", ", ".join(current_keywords) if current_keywords else "None")
 
-        # Checklist for keywords
-        selected_keywords = []
+        # Checklist for keywords in a grid layout
         st.write("Select keywords for this description:")
-        for keyword in keywords:
-            checked = keyword in current_keywords
-            if st.checkbox(keyword, value=checked, key=f"{current_index}_{keyword}"):
-                selected_keywords.append(keyword)
+        selected_keywords = []
+        num_columns = 4  # Adjust this number to control the grid layout
+        columns = st.columns(num_columns)
+
+        for idx, keyword in enumerate(keywords):
+            column = columns[idx % num_columns]
+            with column:
+                checked = keyword in current_keywords
+                if st.checkbox(keyword, value=checked, key=f"{current_index}_{keyword}"):
+                    selected_keywords.append(keyword)
 
         # Save updates and move to the next description
         if st.button("Save and Next"):
