@@ -32,7 +32,7 @@ if uploaded_file:
             st.write(f"**Description {index + 1}:** {row['description']}")
 
             # Display current keywords
-            current_keywords = row['keywords'].split(", ") if row['keywords'] else []
+            current_keywords = row['semantic_fields'].split(", ") if row['semantic_fields'] else []
             st.write("Current Keywords: ", ", ".join(current_keywords) if current_keywords else "None")
 
             # Checklist for keywords
