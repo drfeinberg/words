@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
+import ast  # For safely evaluating list strings
 
-# Load keywords
+# Load predefined keywords
 keywords = [
     'Normal/Weird', 'accent', 'age', 'aggressive', 'agreeable', 'anger', 
     'attractive', 'charisma', 'confidence', 'conscientiousness', 'dominance', 
@@ -12,27 +13,31 @@ keywords = [
 ]
 
 # File upload
-uploaded_file = st.file_uploader("Upload your CSV file with descriptions", type=["csv"])
+uploaded_file = st.file_uploader("Upload your CSV file with descriptions and semantic fields", type=["csv"])
 
 if uploaded_file:
     # Load the CSV
     descriptions_df = pd.read_csv(uploaded_file)
-    if 'description' not in descriptions_df.columns:
-        st.error("The CSV must have a 'description' column.")
+
+    if 'description' not in descriptions_df.columns or 'semantic_fields' not in descriptions_df.columns:
+        st.error("The CSV must have 'description' and 'semantic_fields' columns.")
     else:
         st.write("### Descriptions and Associated Keywords")
-
-        # Initialize keywords column if not present
-        if 'keywords' not in descriptions_df.columns:
-            descriptions_df['keywords'] = ""
 
         # Interactive keyword assignment
         updated_data = []
         for index, row in descriptions_df.iterrows():
             st.write(f"**Description {index + 1}:** {row['description']}")
 
-            # Display current keywords
-            current_keywords = row['semantic_fields'].split(", ") if row['semantic_fields'] else []
+            # Load current keywords from 'semantic_fields'
+            try:
+                current_keywords = ast.literal_eval(row['semantic_fields']) if pd.notna(row['semantic_fields']) else []
+                if not isinstance(current_keywords, list):
+                    raise ValueError
+            except (ValueError, SyntaxError):
+                current_keywords = []
+                st.warning(f"Invalid semantic fields format for description {index + 1}. Defaulting to empty list.")
+
             st.write("Current Keywords: ", ", ".join(current_keywords) if current_keywords else "None")
 
             # Checklist for keywords
@@ -46,12 +51,13 @@ if uploaded_file:
             # Update data
             updated_data.append({
                 "description": row['description'],
-                "keywords": ", ".join(selected_keywords)
+                "semantic_fields": selected_keywords  # Store updated list
             })
 
         # Save updated data
         if st.button("Save Updates"):
             updated_df = pd.DataFrame(updated_data)
+            updated_df['semantic_fields'] = updated_df['semantic_fields'].apply(lambda x: str(x))  # Convert lists to strings
             updated_df.to_csv("updated_descriptions.csv", index=False)
             st.success("Updated descriptions saved to 'updated_descriptions.csv'!")
             st.dataframe(updated_df)
