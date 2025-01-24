@@ -5,7 +5,7 @@ import os  # To check file existence
 
 # Load predefined keywords (sorted alphabetically)
 keywords = sorted([
-    'Normal/Weird', 'accent', 'age', 'aggressive', 'agreeable', 'anger', 
+    'normal/weird', 'accent', 'age', 'aggressive', 'agreeable', 'anger', 
     'attractive', 'charisma', 'confidence', 'conscientiousness', 'dominance', 
     'emotionally stable', 'empathy', 'extraversion', 'fear', 'funny', 'gender', 
     'happy', 'health', 'height', 'height/size', 'intelligent', 'leadership', 
